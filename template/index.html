@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #666;
+        }
+
+        .box {
+            position: absolute;
+            transition: all 0.3s ease-in-out;
+            left: 0;
+            right: 0;
+            width: 400px;
+            top: calc(50% - 250px);
+            height: 500px;
+            margin: 0 auto;
+            border: 1px solid #888;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #ccc;
+        }
+
+        .box h3 {
+            text-align: center;
+            font-size: 24px;
+
+            border: 1px solid #666;
+        }
+
+        .box .info {
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .box button {
+            display: block;
+            position: absolute;
+            width: 220px;
+            height: 50px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+        }
+
+        .box button:hover {
+            background-color: #3e8e41;
+        }
+
+        .box p {
+            margin-top: 20px;
+            height: 270px;
+            font-size: 18px;
+            word-break: break-all;
+            text-align: center;
+        }
+
+        dialog {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            top: 120px;
+        }
+
+        dialog img {
+            width: 200px;
+            height: 200px;
+        }
+
+        dialog label {
+            text-align: center;
+            display: inherit;
+        }
+
+        /* 背景遮罩样式 */
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    <title>wx qcloud captcha</title>
+</head>
+
+<body>
+    <div class="box">
+        <h3>host sign in</h3>
+        <div class="info">
+            <p>请使用微信扫码登录</p>
+            <button>点击登录</button>
+        </div>
+        <div class="dialog">
+            <dialog id="dialog">
+                <label>微信扫码登录</label>
+                <img src="" alt="">
+            </dialog>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            let info_element = document.querySelector('.info'),
+                dialog_element = document.querySelector('#dialog'),
+                button_element = document.querySelector('button'),
+                p = info_element.querySelector('p'),
+                label_element = dialog_element.querySelector('label'),
+                img_element = document.querySelector('img');
+
+            function show_dialog(data) {
+                img_element.src = data.qrcode, img_element.alt = data.uuid;
+                dialog_element.show();
+            }
+
+
+            button_element.addEventListener('click', async () => {
+                let result = await fetch('/qrcode');
+                let data = await result.json();
+                console.log(data);
+
+                show_dialog(data);
+            });
+            async function show_info(wx_code) {
+                let result = await fetch(`/newticket/${wx_code}`);
+                let data = await result.json();
+                img_element.src = data.headurl, label_element.innerText = data.nickname;
+                console.log(data);
+                let timeout_intercal = setTimeout(() => {
+                    let {openid, ticket, newticket,signature,ticket_expired_time,signature_expired_time} = data;
+                    p.innerHTML = `openid: ${openid}<br>ticket: ${ticket}<br>newticket: ${newticket}<br>signature: ${signature}<br>ticket_expired_time: ${ticket_expired_time}<br>signature_expired_time: ${signature_expired_time}`;
+                    dialog_element.close();
+                    clearTimeout(timeout_intercal);
+                }, 2000);
+            }
+
+            function create_url(uuid) {
+                let url = `https://lp.open.weixin.qq.com/connect/l/qrconnect?uuid=${uuid}&_=${Date.now()}`;
+                // let oringin_script = document.querySelector('#qrconnect');
+                // oringin_script && oringin_script.remove();
+                let script = document.createElement('script');
+                script.onload = async () => {
+                    console.log(wx_code, wx_errcode)
+                    script.remove();
+                    if (wx_errcode == 404) {
+                        p.innerText = '请在手机端确认登录';
+                        let timeout_intercal = setTimeout(() => {
+                            create_url(uuid);
+                            clearTimeout(timeout_intercal);
+                        }, 3000);
+                        return
+                    }
+                    if (wx_errcode == 408) {
+                        p.innerText = '等待微信扫码';
+                        create_url(uuid);
+                        return
+                    }
+                    if (wx_errcode == 405) {
+                        p.innerText = '微信登录完成';
+                        console.log(wx_code);
+                        // 登录成功后，可以做一些后续操作
+                        show_info(wx_code);
+                        return
+                    }
+                    // !wx_code && create_url(uuid);
+                }
+                script.id = 'qrconnect';
+                script.src = url;
+                document.body.appendChild(script);
+                return url;
+            }
+            img_element.onload = evt =>{
+                console.log(evt.target.alt);
+                
+                create_url(evt.target.alt);
+                img_element.onload = null;
+            }
+        })
+
+    </script>
+</body>
+
+</html>
