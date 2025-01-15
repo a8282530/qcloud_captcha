@@ -6,12 +6,12 @@ from utils.api import WeQrcodeAPI, verify_plugin
 import json
 import time
 import os
-
+import asyncio
 
 app = Quart(__name__, static_folder="static", template_folder="template")
 cors(app)
 
-timelimit = int(os.environ.get("timelimit", 600))
+timelimit = int(os.environ.get("timelimit", 590))
 
 """
 "errorCode": "12"  # 验证码错误 请求频繁 
@@ -94,6 +94,19 @@ class EnvManager:
 
 Env = EnvManager('./.env')
 
+async def background_task(callble:callable, *args, **kwargs):
+    res = await callble(*args, **kwargs)
+    app.logger.info(f"background_task: {res}")
+    return res
+
+async def verifyPlugin(newticket:str):
+    res = await verify_plugin(newticket)
+    app.logger.info(f"background_task: {res}")
+    if not res.get('errmsg'):
+        HOSTSIGN.from_dict(res)
+    return res
+    
+
 @app.route("/")
 async def index():
     TICKETS.from_dict(Env.get_dict('TICKETS'))
@@ -114,6 +127,7 @@ async def newticket(wxcode:str):
         TICKETS.openid = res['openid']
         TICKETS.newticket = newticket
         Env.set_dict('TICKETS', TICKETS.to_dict())
+        asyncio.create_task(verifyPlugin(newticket))
     return res
 
 @app.get("/gethostsign")
@@ -138,8 +152,6 @@ async def gethostsign():
             return {'errmsg': errmsg}
     HOSTSIGN.from_dict(res)
     return res
-
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 1188))
