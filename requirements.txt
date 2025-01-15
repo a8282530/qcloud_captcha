@@ -1,5 +1,5 @@
 quart
-hypercorn
+quart_cors
 python-dotenv
 curl-cffi
-quart_cors
+
