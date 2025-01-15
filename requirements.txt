@@ -1,0 +1,5 @@
+quart
+hypercorn
+python-dotenv
+curl-cffi
+quart_cors
