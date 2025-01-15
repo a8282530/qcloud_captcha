@@ -132,6 +132,7 @@ async def gethostsign():
         if errmsg:
             return {'errmsg': errmsg}
         TICKETS.newticket = res['newticket']
+        Env.set_dict('TICKETS', TICKETS.to_dict())
         res = await verify_plugin(TICKETS.newticket)
         if errmsg:=res.get('errmsg'):
             return {'errmsg': errmsg}
