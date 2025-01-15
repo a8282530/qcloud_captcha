@@ -92,7 +92,7 @@ class EnvManager:
         unset_key(self.env_file, key)
         load_dotenv(self.env_file, override=True)
 
-Env = EnvManager('./env/.env')
+Env = EnvManager('./.env')
 
 @app.route("/")
 async def index():
